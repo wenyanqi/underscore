@@ -84,7 +84,10 @@
     	if (_.isObject(value)) return _.matcher(value);
     	return _.property(value);
     }
-
+    _.iteratee = function(value, context) {
+        //Infinity用于表示正无穷大的数值
+        return cb(value, context, Infinity);
+    }
     //内部函数，用来返回一个分配器函数？？干嘛用的,感觉就是把argument参数转换成一个object
     var createAssigner = function(keysFunc, undefinedOnly) {
     	return function(obj) {
@@ -182,8 +185,9 @@
     };
 
     // Create a reducing function iterating left or right.
+    //dir应该是表示每次迭代移动的距离
     function createReduce(dir) {
-    	//优化一个iterator函数，why？？嫌人家不够好？
+    	//根据reduce计算的需要优化iterator函数
 
     	//memo是reduction的初始状态
     	function iterator(obj, iteratee, memo, keys, index, length) {
@@ -199,7 +203,9 @@
     		var keys = !isArrayLike(obj) && _.key(obj),
     		    length = (keys || obj).length,
     		    index = dir > 0 ? 0 : length - 1;
-    		    
+    		
+            //如果没有初始状态，将obj中第一个元素设置为初始状态
+            //注意index要++，不然第一个元素就会被加两次
     		if (arguments.length < 3) {
     			memo = obj[keys ? keys[index] : index];
     			index += dir;
@@ -208,9 +214,64 @@
     	};
     }
 
-    _.iteratee = function(value, context) {
-    	//Infinity用于表示正无穷大的数值
-    	return cb(value, context, Infinity);
+    _.reduce = _.fold1 = _.inject = createReduce(1);
+
+    //所以把createReduce封装成了一个函数，这样两个不同的功能实现就可以用这个了
+    _.reduceRight = _.folder = createReduce(-1);
+
+    //用户传入函数，返回满足条件的第一个元素
+    //var a = _.find([1,2,3,4,5],function(value,index){return index>2;});
+    // a是4
+    _.find = _.detect = function(obj, predicate, context) {
+        var key;
+        if(isArrayLike(obj)) {
+            key = _.findIndex(obj, predicate, context);
+        } else {
+            key = _.findKey(obj, predicate, context);
+        }
+        //数组没找到，会返回-1，对象会返回undefined
+        if (key !== void 0 && key != -1) return obj[key];
+    }
+
+    //返回满足条件的所有元素
+    _.filter = _.select = function(obj, predicate, context) {
+        var results = [];
+    }
+
+    function createPredicateIndexFinder(dir) {
+        return function(array, predicate, context) {
+            predicate = cb(predicate, context);
+            var length = getLength(array);
+            var index = dir > 0 ? 0 : length - 1;
+            for(; index >= 0 && index < length; index += dir) {
+                if(predicate(array[index], index, array)) return index;
+            }
+            return -1;
+        }
+    }
+
+    _.findIndex = createPredicateIndexFinder(1);
+    _.findLastIndex = createPredicateIndexFinder(-1);
+
+
+    _.keys = function(obj) {
+        if (!_.isObject(obj)) return [];
+        if (nativeKeys) return nativeKeys(obj);
+        var keys = [];
+        for (var key in obj) if (_.has(obj, key)) keys.push(key);
+        // Ahem, IE < 9.
+        if (hasEnumBug) collectNonEnumProps(obj, keys);
+        return keys;
+    };
+
+    //如果满足条件，就把key返回来，如果没有，得到的是undefined
+    _.findKey = function(obj, predicate, context) {
+        predicate = cb(predicate, context);
+        var keys = _.keys(obj), key;
+        for(var i = 0, length = keys.length; i < length; i++) {
+            key = keys[i];
+            if(predicate(obj[key],key,obj)) return key;
+        }
     }
 
     //判断变量的类型，如果执行ES5的原生的isArray，就用这个，不支持，就用原来的
