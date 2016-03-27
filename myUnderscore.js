@@ -234,9 +234,74 @@
     }
 
     //返回满足条件的所有元素
+    //var a = _.filter([1,2,3,4,5],function(value,index){return index>2;});
+    // a是[4,5]
     _.filter = _.select = function(obj, predicate, context) {
         var results = [];
+        predicate = cb(predicate, context);
+        _.each(obj, function(value, index, list) {
+            if(predicate(value, index, list)) results.push(value);
+        });
+        return results;
+    };
+
+    //找到所有不符合条件的元素
+    _.reject = function(obj, predicate, context) {
+        return _.filter(obj, _.negate(cb(predicate)), context);
+    };
+
+    //判断是不是所有的元素都符合条件
+    _.every = _.all = function(obj, predicate, context) {
+        predicate = cb(predicate, context);
+        var keys = !isArrayLike(obj) && _.keys(obj),
+            length = (keys || obj).length;
+        for(var index = 0; index < length; index ++) {
+            var currentKey = keys ? keys[index] : index;
+            if(!predicate(obj[currentKey], currentKey, obj)) return false;
+        }
+        return true;
     }
+
+    //判断对象中是否有元素符合条件
+    _.some = _.any = function(obj, predicate, context) {
+        predicate = cb(predicate, context);
+        var keys = !isArrayLike(obj) && _.keys(obj),
+            length = (keys || obj).length;
+        for (var index = 0; index < length; index++) {
+            var currentKey = keys ? keys[index] : index;
+            if(predicate(obj[currentKey], currentKey, obj)) return true;
+        }
+        return false;
+    }
+
+    //是否包含给定的元素,也是利用indexOf来实现的
+    _.contains = _.includes = _.include = function(obj, item, fromeIndex, guard) {
+        if (!isArrayLike(obj)) obj = _.values(obj);
+        if (typeof formIndex != 'number' || guard) fromIndex = 0;
+        return _.indexOf(obj, item, fromIndex) >= 0;
+    }
+
+
+    //Generator function to create the indexOf and lastIndexOf functions
+    function createIndexFinder(dir, predicateFind, sortedIndex) {
+        return function(array, item, idx) {
+            var i = 0, length = getLength(array);
+            if (typeof idx == 'number') {
+                if(dir > 0) {
+                    i = idx >= 0 ? idx : Math.max(idx + length, i);
+                } else {
+                    length = idx >=0 ? Math.min(idx + 1, length) : idx + length + 1;
+                }
+            }
+        }
+    }
+
+    // Return the position of the first occurrence of an item in an array,
+    // or -1 if the item is not included in the array.
+    // If the array is large and already in sort order, pass `true`
+    // for **isSorted** to use binary search.
+    _.indexOf = createIndexFinder(1, _.findIndex, _.sortedIndex);
+    _.lastIndexOf = createIndexFinder(-1, _.findLastIndex);
 
     function createPredicateIndexFinder(dir) {
         return function(array, predicate, context) {
@@ -253,6 +318,13 @@
     _.findIndex = createPredicateIndexFinder(1);
     _.findLastIndex = createPredicateIndexFinder(-1);
 
+    //返回传入的条件的相反结果
+    _.negate = function(predicate) {
+        //设置返回否结果就行
+        return function() {
+            return !predicate.apply(this,arguments);
+        };
+    };
 
     _.keys = function(obj) {
         if (!_.isObject(obj)) return [];
@@ -262,6 +334,17 @@
         // Ahem, IE < 9.
         if (hasEnumBug) collectNonEnumProps(obj, keys);
         return keys;
+    };
+
+    //获取对象的所有value
+    _.values = function(obj) {
+        var keys = _.keys(obj);
+        var length = keys.length;
+        var values = Array(length);
+        for (var i = 0; i < length; i++) {
+            values[i] = obj[keys[i]];
+        }
+        return values;
     };
 
     //如果满足条件，就把key返回来，如果没有，得到的是undefined
