@@ -83,11 +83,11 @@
     	if (_.isFunction(value)) return optimizeCb(value, context, argCount);
     	if (_.isObject(value)) return _.matcher(value);
     	return _.property(value);
-    }
+    };
     _.iteratee = function(value, context) {
         //Infinity用于表示正无穷大的数值
         return cb(value, context, Infinity);
-    }
+    };
     //内部函数，用来返回一个分配器函数？？干嘛用的,感觉就是把argument参数转换成一个object
     var createAssigner = function(keysFunc, undefinedOnly) {
     	return function(obj) {
@@ -117,7 +117,7 @@
     	var result = new Ctor;
     	Ctor.prototype = null;
     	return result;
-    }
+    };
 
     var property = function(key) {
     	return function(obj) {
@@ -133,7 +133,7 @@
     var isArrayLike = function(collection) {
     	var length = getLength(collection);
     	return typeof length == 'number' && length >= 0 && length <= MAX_ARRAY_INDEX;
-    }
+    };
 
     //下面就是collection的方法了
     //-------------------------------------
@@ -231,7 +231,7 @@
         }
         //数组没找到，会返回-1，对象会返回undefined
         if (key !== void 0 && key != -1) return obj[key];
-    }
+    };
 
     //返回满足条件的所有元素
     //var a = _.filter([1,2,3,4,5],function(value,index){return index>2;});
@@ -260,7 +260,7 @@
             if(!predicate(obj[currentKey], currentKey, obj)) return false;
         }
         return true;
-    }
+    };
 
     //判断对象中是否有元素符合条件
     _.some = _.any = function(obj, predicate, context) {
@@ -272,37 +272,105 @@
             if(predicate(obj[currentKey], currentKey, obj)) return true;
         }
         return false;
-    }
+    };
 
     //是否包含给定的元素,也是利用indexOf来实现的
     _.contains = _.includes = _.include = function(obj, item, fromeIndex, guard) {
         if (!isArrayLike(obj)) obj = _.values(obj);
         if (typeof formIndex != 'number' || guard) fromIndex = 0;
         return _.indexOf(obj, item, fromIndex) >= 0;
-    }
+    };
 
+    //在每一个元素上调用传入的方法，调用map实现
+    //_.invoke([[5, 1, 7], [3, 2, 1]], 'sort');
+    //返回[[1, 5, 7], [1, 2, 3]]，sort是数组的方法
+    _.invoke = function(obj, method) {
+        var args = slice.call(arguments, 2);
+        var isFunc = _.isFunction(method);
+        return _.map(obj, function(value) {
+            //如果是函数，func就是这个函数，
+            //如果不是函数，就去找这个obj里面有没有这个方法，赋给func
+            //如果上面两种都是，func为null
+            var func = isFunc ? method : value[method];
+            return func == null ? func : func.apply(value, args);
+        });
+    };
 
-    //Generator function to create the indexOf and lastIndexOf functions
-    function createIndexFinder(dir, predicateFind, sortedIndex) {
-        return function(array, item, idx) {
-            var i = 0, length = getLength(array);
-            if (typeof idx == 'number') {
-                if(dir > 0) {
-                    i = idx >= 0 ? idx : Math.max(idx + length, i);
-                } else {
-                    length = idx >=0 ? Math.min(idx + 1, length) : idx + length + 1;
+    //利用map获得属性
+    //var stooges = [{name: 'moe', age: 40}, {name: 'larry', age: 50}, {name: 'curly', age: 60}];
+    //_.pluck(stooges, 'name');
+    //=> ["moe", "larry", "curly"]
+    _.pluck = function(obj, key) {
+        return _.map(obj, _.property(key));
+    };
+
+    //找到所有包含有特殊的key:value对的对象
+    _.where = function(obj, attrs) {
+        return _.filter(obj, _.matter(attrs));
+    };
+
+    //找到第一个包含key:value键值对的obj
+    _.findWhere = function(obj, attrs) {
+        return _.find(obj, _.matter(attrs));
+    };
+
+    //返回最大的元素,或者是对元素进行一定的计算，找出对应计算后结果的最大
+    _.max = function(obj, iteratee, context) {
+        var result = -Infinity, lastComputed = -Infinity,
+            value, computed;
+        if(iteratee == null && obj != null) {
+            obj = isArrayLike(obj) ? obj : _.values(obj);
+            for(var i = 0, length = obj.length; i< length; i++) {
+                var value = obj[i];
+                if(value > result) {
+                    result = value;
                 }
             }
+        } else {
+            iteratee = cb(iteratee, context);
+            _.each(obj, function(value, index, list) {
+                computed = iteratee(value, index, list);
+                if(computed > lastComputed) {
+                    lastComputed = computed;
+                    result = value;
+                }
+            });
         }
+        return result;
+    };
+
+    _.min = function(obj, iteratee, context) {
+        var result = Infinity, lastComputed = Infinity,
+            value, computed;
+        if(iteratee == null && obj != null) {
+            obj = isArrayLike(obj) ? obj : _.values(obj);
+            for(var i=0, length = obj.length; i<length; i++) {
+                var value = obj[i];
+                if(value < result) {
+                    result = value;
+                }
+            }
+        } else {
+            iteratee = cb(iteratee, context);
+            _.each(obj, function(value, index, list) {
+                computed = iteratee(value, index, list);
+                if(computed < lastComputed) {
+                    lastComputed = computed;
+                    result = value;
+                }
+            });
+        }
+        return result;
+    };
+
+    //shuffle a collection
+    _.shuffle = function(obj) {
+        var set = isArrayLike
+        var length = set.length;
+        var shuffled = Array[length];
     }
 
-    // Return the position of the first occurrence of an item in an array,
-    // or -1 if the item is not included in the array.
-    // If the array is large and already in sort order, pass `true`
-    // for **isSorted** to use binary search.
-    _.indexOf = createIndexFinder(1, _.findIndex, _.sortedIndex);
-    _.lastIndexOf = createIndexFinder(-1, _.findLastIndex);
-
+    //找到满足条件的index
     function createPredicateIndexFinder(dir) {
         return function(array, predicate, context) {
             predicate = cb(predicate, context);
@@ -317,6 +385,57 @@
 
     _.findIndex = createPredicateIndexFinder(1);
     _.findLastIndex = createPredicateIndexFinder(-1);
+
+    //用二分查找来找到插入一个数据不破坏顺序的位置
+    _.sortedIndex = function(array, obj, iteratee, context) {
+        iteratee = cb(iteratee, context, 1);
+        var value = iteratee(obj);
+        var low = 0, high = getLength(array);
+        while(low < high) {
+            var mid = Math.floor((low + high) / 2);
+            if (iteratee(array[mid]) < value) low = mid +1; else high = mid - 1;
+        }
+        return low;
+    }
+
+    //Generator function to create the indexOf and lastIndexOf functions
+    function createIndexFinder(dir, predicateFind, sortedIndex) {
+        return function(array, item, idx) {
+            var i = 0, length = getLength(array);
+
+            //这个好像是在判断是不是数组。经验证确实是
+            if (typeof idx == 'number') {
+                if(dir > 0) {
+                    i = idx >= 0 ? idx : Math.max(idx + length, i);
+                } else {
+                    //相当于dir为负时，需要从指定元素开始倒着遍历到0，所以length就是idx+1
+                    length = idx >=0 ? Math.min(idx + 1, length) : idx + length + 1;
+                }
+            } else if (sortedIndex && idx && length) {
+                idx = sortedIndex(array, item);
+                return array[idx] === item ? idx : -1;
+            }
+
+            //这个有点看不懂？
+            if(item !== item) {
+                idx = predicateFind(slice.call(array, i, length), _.isNaN);
+                return idx >= 0 ? idx + 1 : -1;
+            }
+            for(idx = dir > 0 ? i : length - 1; idx >= 0 && idx < length; idx += dir) {
+                if (array[idx] === item) return idx;
+            }
+            return -1;
+        };
+    }
+
+    // Return the position of the first occurrence of an item in an array,
+    // or -1 if the item is not included in the array.
+    // If the array is large and already in sort order, pass `true`
+    // for **isSorted** to use binary search.
+    _.indexOf = createIndexFinder(1, _.findIndex, _.sortedIndex);
+    _.lastIndexOf = createIndexFinder(-1, _.findLastIndex);
+
+   
 
     //返回传入的条件的相反结果
     _.negate = function(predicate) {
@@ -356,6 +475,24 @@
             if(predicate(obj[key],key,obj)) return key;
         }
     }
+
+    //判断一个对象中是否包含有 set of key:value键值对
+    _.isMatch = function(object, atrrs) {
+        var keys = _.keys(attrs), length = keys.length;
+        //!length确实是妙，如果要检索的attrs本身就是空的，length是0，！length就是true
+        //如果不为空，但是object为空，则说明要返回false，刚好就是!length
+        if(object == null) return !length;
+        var obj = Object(object);
+        for (var i = 0; i< length; i++) {
+            var key = keys[i];
+
+            //后面的！(key in obj)应该是为了防止这种状况：
+            //a = {'name':"sd",age:undefined}, key为age，object中没有age字段
+            //这是attrs[age]===obj[age],就会返回true，但其实是false 
+            if(attrs[key] !== obj[key] || !(key in obj)) return false;
+        }
+        return true;
+    };
 
     //判断变量的类型，如果执行ES5的原生的isArray，就用这个，不支持，就用原来的
     _.isArray = nativeIsArray || function(obj) {
@@ -403,9 +540,27 @@
 		return value;
 	};
 
+    _.property = property;
+
+    //给出一个对象的指定属性
+    _.propertyOf = function(obj) {
+        return obj == null ? function(){} : function(key) {
+            return obj[key];
+        };
+    };
+
+    //检查对象中是否包含有一个特定的key:value对
+    _.matcher = _.matches = function(attrs) {
+        attrs = _.extendOwn({}, attrs);
+        return function(obj) {
+            return _.isMatch(obj, attrs);
+        };
+    };
 
 	_.prototype.toString = function() {
 	    return '' + this._wrapped;
 	};
+
+
 
 }).call(this);
