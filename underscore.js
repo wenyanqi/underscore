@@ -391,6 +391,7 @@
   // Sort the object's values by a criterion produced by an iteratee.
   _.sortBy = function(obj, iteratee, context) {
     iteratee = cb(iteratee, context);
+  
     return _.pluck(_.map(obj, function(value, index, list) {
       return {
         value: value,

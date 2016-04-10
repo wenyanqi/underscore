@@ -7,8 +7,8 @@
     //简化prototype,把这些常用到的原型都保存起来，后面会经常用到，提高性能
     var ArrayProto = Array.prototype, ObjProto = Object.prototype, FuncProto = Function.prototype;
 
-    //将原型中原来的原始方法保存起来
-    //恩，这种代码风格不错，看起来确实是要整齐些
+    //将原型中原来的原始方法保存起来码风格不错，看起来确实
+    //恩，这种代是要整齐些
     var 
     	push           = ArrayProto.push,
     	slice          = ArrayProto.slice,
@@ -364,10 +364,155 @@
     };
 
     //shuffle a collection
+    //返回一个list的打乱顺序的复制
     _.shuffle = function(obj) {
-        var set = isArrayLike
+        var set = isArrayLike(obj) ? obj : _.values(obj);
         var length = set.length;
         var shuffled = Array[length];
+        for (var index = 0, rand; index < length; index++) {
+            rand = _.random(0, index);
+            if (rand !== index) shuffled[index] = shuffled[rand];
+            shuffled[rand] = set[index];
+        }
+        return shuffled;
+    }
+
+    //sample用来在collection中随机挑选value，如果n没有给定，默认n为1
+    //guard参数可以允许collection为map
+    _.sample = function(obj, n, guard) {
+        if(n == null || guard) {
+            if(!isArrayLike(obj)) obj = _.values(obj);
+            return obj[_.random(obj.length - 1)];
+        }
+        return _.shuffle(obj).slice(0, Math.max(0, n));
+    };
+
+    // Sort the object's values by a criterion produced by an iteratee.
+    //如果是数组，根据iteratee的处理结果对数组进行排序，
+    //如果是对象，iteratee传入的是对象的一个属性，根据属性值的大小进行排序
+    //利用map对obj进行处理，返回的是index，value，criteria这样的一个对象数组
+    //然后返回的这个对象数组进行排序，排序根据criteria的结果进行排序
+    //然后利用pluck获取；排序好的对象的所有属性
+    _.sortBy = function(obj, iteratee, context) {
+        iteratee = cb(iteratee, context);
+        return _.pluck(_.map(obj, function(value, index, list) {
+            return {
+                value: value,
+                index: index,
+                criteria: iteratee(value, index, list)
+            };
+        }).sort(function(left, right) {
+            var a = left.criteria;
+            var b = right.criteria;
+            if (a !== b) {
+                if (a > b || a === void 0) return 1;
+                if (a < b || b === void 0) return -1;
+            }
+            return left.index - right.index;
+        }).'value');
+    };
+
+    //An internal function used for aggregate "group by" operations
+    var group = function(behavior) {
+        return function(obj, iteratee, context) {
+            var result = {};
+            iteratee = cb(iteratee, context);
+            _.each(obj, function(value, index) {
+               var key = iteratee(value, index, obj);
+               behavior(result, value, key); 
+            });
+            return result;
+        };
+    };
+
+    //Groups the object's values by a cirterion. Pass either a string 
+    //attribute to group by, or a function that returns the criterion.
+    //_.groupBy([1.3, 2.1, 2.4], function(num){ return Math.floor(num); });
+    //=> {1: [1.3], 2: [2.1, 2.4]}
+
+    //_.groupBy(['one', 'two', 'three'], 'length');
+    //=> {3: ["one", "two"], 5: ["three"]}
+    _.groupBy = group(function(result, value, key) {
+        if(_.has(result, key)) result[key].push(value); else result[key] = [value];
+    })
+
+    //Indexes the object's values by a criterion, similar to "groupBy", but for
+    //when you know that your index values will be unique.
+    //var stooges = [{name: 'moe', age: 40}, {name: 'larry', age: 50}, {name: 'curly', age: 60}];
+    //_.indexBy(stooges, 'age');
+    //=> {
+    // "40": {name: 'moe', age: 40},
+    //"50": {name: 'larry', age: 50},
+    //"60": {name: 'curly', age: 60}
+    //}
+    _.indexBy = group(function(result, value, key) {
+        result[key] = value;
+    });
+
+    _countBy = group(function(result, value, key) {
+        if(_.has(result, key)) result[key]++; else result[key] = 1;
+    })
+
+    //Safely create a real, live array from anything iterable
+    //如果是数组，就直接返回
+    _.toArray = function(obj) {
+        if (!obj) return [];
+        //这里为什么不直接返回obj
+        //slice的内部实现中，肯定是用this[i]访问变量的，call就会把obj传进去。
+        //Array.prototype.slice.call(obj) 可以把obj转成array
+        if(_.isArray(obj))  return slice.call(obj);  
+        if(isArrayLike(obj)) return _.map(obj, _.identity);
+        return _.values(obj);
+    }
+
+    //return the number of elements in an object.
+    _.size = function(obj) {
+        if (obj == null) return 0;
+        return isArrayLike(obj) ? obj.length : _.keys(obj).length;
+    }
+
+    //Split a collection into two arrays: one whose elements all satisfy the given
+    //predicate, and one whose elements all do not satisfy the predicate.
+    _.partition = function(obj, predicate, context) {
+        predicate = cb(predicate, context);
+        var pass = [], fail = [];
+        _.each(function(value, index, obj) {
+            //这种写法很巧妙，学习了，三元表达式
+            (predicate(value, index, obj) ? pass : fail).push(value);
+        });
+        return [pass, fail];
+    };
+
+    // Array Functions
+    // ---------------
+
+    // Get the first element of an array. Passing **n** will return the first N
+    // values in the array. Aliased as 'head' and 'take'. The **guard** check
+    // allows it to work with '_.map'.
+    _.first = _.head = _.take = function(array, n, guard) {
+        if (array == null) return void 0;
+        if (n == null || guard) return array[0];
+        return _.initial(array, array.length - n);
+    }
+
+    // Returns everything but the last entry of the array. Especially useful on
+    // the arguments object. Passing **n** will return all the values in
+    // the array, excluding the last N.
+    _.initial = function(array, n, guard) {
+        return slice.call(array, 0, Math.max(0, array.length - (n == null || guard ? 1 : n)));
+    };
+
+    // Get the last element of an array. Passing **n** will return the last N
+    // values in the array.
+    _.last = function(array, n, guard) {
+        if (array == null) return void 0;
+        if (n == null || guard) return array[array.length - 1];
+        //Math.max也用的很巧妙，这样就不用判断length和n的大小关系了
+        return _.rest(array, Math.max(0, array.length - n));
+    }
+
+    _.rest = _.tail = _.drop = function(array, n, guard) {
+        return slice.call(array, n == null || guard ? 1 : n);
     }
 
     //找到满足条件的index
@@ -435,7 +580,25 @@
     _.indexOf = createIndexFinder(1, _.findIndex, _.sortedIndex);
     _.lastIndexOf = createIndexFinder(-1, _.findLastIndex);
 
-   
+    //返回一个数组，从start开始，到stop结束，元素相隔step
+    //_.range(10);  得到的是0,1,2,3,4,5,6,7,8,9
+    //_.range(12,2); 得到的是0,2,4,6,8,10
+    _.range = function(start, stop, step) {
+        //支持start默认为0，传入stop是多少即可
+        if (stop == null) {
+            stop = start || 0;
+            start = 0;
+        }
+
+        //默认step为1
+        step = step || 1;
+        var length = (stop-start) / step;
+        var range = Array(length);
+        for(var idx = 0; idx < length; idx++, start += step) {
+            range[idx] = start;
+        }
+        return range;
+    }
 
     //返回传入的条件的相反结果
     _.negate = function(predicate) {
