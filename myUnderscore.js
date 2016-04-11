@@ -375,7 +375,7 @@
             shuffled[rand] = set[index];
         }
         return shuffled;
-    }
+    };
 
     //sample用来在collection中随机挑选value，如果n没有给定，默认n为1
     //guard参数可以允许collection为map
@@ -434,7 +434,7 @@
     //=> {3: ["one", "two"], 5: ["three"]}
     _.groupBy = group(function(result, value, key) {
         if(_.has(result, key)) result[key].push(value); else result[key] = [value];
-    })
+    });
 
     //Indexes the object's values by a criterion, similar to "groupBy", but for
     //when you know that your index values will be unique.
@@ -451,7 +451,7 @@
 
     _countBy = group(function(result, value, key) {
         if(_.has(result, key)) result[key]++; else result[key] = 1;
-    })
+    });
 
     //Safely create a real, live array from anything iterable
     //如果是数组，就直接返回
@@ -463,13 +463,13 @@
         if(_.isArray(obj))  return slice.call(obj);  
         if(isArrayLike(obj)) return _.map(obj, _.identity);
         return _.values(obj);
-    }
+    };
 
     //return the number of elements in an object.
     _.size = function(obj) {
         if (obj == null) return 0;
         return isArrayLike(obj) ? obj.length : _.keys(obj).length;
-    }
+    };
 
     //Split a collection into two arrays: one whose elements all satisfy the given
     //predicate, and one whose elements all do not satisfy the predicate.
@@ -493,7 +493,7 @@
         if (array == null) return void 0;
         if (n == null || guard) return array[0];
         return _.initial(array, array.length - n);
-    }
+    };
 
     // Returns everything but the last entry of the array. Especially useful on
     // the arguments object. Passing **n** will return all the values in
@@ -509,11 +509,13 @@
         if (n == null || guard) return array[array.length - 1];
         //Math.max也用的很巧妙，这样就不用判断length和n的大小关系了
         return _.rest(array, Math.max(0, array.length - n));
-    }
+    };
 
     _.rest = _.tail = _.drop = function(array, n, guard) {
         return slice.call(array, n == null || guard ? 1 : n);
-    }
+    };
+
+
 
     //找到满足条件的index
     function createPredicateIndexFinder(dir) {
